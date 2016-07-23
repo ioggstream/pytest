@@ -60,6 +60,9 @@ def pytest_addoption(parser):
     group.addoption('--noconftest', action="store_true",
         dest="noconftest", default=False,
         help="Don't load any conftest.py files.")
+    group.addoption('--skipduplicates', '--skip-duplicates', action="store_true",
+        dest="skipduplicates", default=False,
+        help="Skip duplicate tests.")
 
     group = parser.getgroup("debugconfig",
         "test session debugging and configuration")
@@ -146,7 +149,21 @@ def pytest_ignore_collect(path, config):
     excludeopt = config.getoption("ignore")
     if excludeopt:
         ignore_paths.extend([py.path.local(x) for x in excludeopt])
-    return path in ignore_paths
+
+    if path in ignore_paths:
+        return True
+
+    # Skip duplicate paths.
+    skipduplicates = config.getoption("skipduplicates")
+    duplicate_paths = config.pluginmanager._skipduplicates
+    if skipduplicates:
+        if path.purebasename in duplicate_paths:
+            #  print("Path is duplicate, skipping:", path)  # FIXME where is the logger?
+            return True
+        else:
+            duplicate_paths.add(path.purebasename)
+
+    return False
 
 class FSHookProxy:
     def __init__(self, fspath, pm, remove_mods):

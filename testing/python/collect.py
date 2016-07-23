@@ -1198,3 +1198,29 @@ def test_syntax_error_with_non_ascii_chars(testdir):
         '*SyntaxError*',
         '*1 error in*',
     ])
+
+
+def test_dont_collect_duplicate(testdir):
+    """Test for issue https://github.com/pytest-dev/pytest/issues/1609
+
+    Test skipping duplicate tests works.
+    """
+    a = testdir.mkdir("a")
+    b = testdir.mkdir("b")
+    a.join("test_a.py").write(_pytest._code.Source("""
+        import pytest
+        def test_real():
+            pass
+    """))
+    b.join("test_a.py").write(_pytest._code.Source("""
+        import pytest
+        def test_real():
+            pass
+    """))
+
+    result = testdir.runpytest('--skip-duplicates')
+    result.stdout.fnmatch_lines([
+        '*collected 1 item*',
+    ])
+
+
